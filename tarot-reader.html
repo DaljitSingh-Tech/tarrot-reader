@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Arcana — Tarot Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES & RESET
+═══════════════════════════════════════════ */
+:root {
+  --bg-void:     #06040f;
+  --bg-deep:     #0d0a1e;
+  --bg-mid:      #130f2a;
+  --bg-surface:  #1c1638;
+  --gold:        #c9a227;
+  --gold-light:  #e8c84a;
+  --gold-dim:    #7a6118;
+  --amethyst:    #7b5ea7;
+  --amethyst-light: #a07cc8;
+  --crimson:     #8b1a2e;
+  --cream:       #f0e8d0;
+  --cream-dim:   #b8a888;
+  --white:       #ffffff;
+  --card-back:   #120e28;
+  --radius-card: 12px;
+  --shadow-gold: 0 0 20px rgba(201,162,39,0.4);
+  --shadow-deep: 0 8px 32px rgba(0,0,0,0.8);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg-void);
+  color: var(--cream);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ═══════════════════════════════════════════
+   STARFIELD BACKGROUND
+═══════════════════════════════════════════ */
+#starfield {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--cream);
+  animation: twinkle var(--d, 3s) ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from { opacity: var(--a0, 0.1); transform: scale(1); }
+  to   { opacity: var(--a1, 0.7); transform: scale(1.3); }
+}
+
+/* Constellation lines */
+#constellations {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.15;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT WRAPPER
+═══════════════════════════════════════════ */
+#app {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════
+   HEADER / MASTHEAD
+═══════════════════════════════════════════ */
+header {
+  text-align: center;
+  padding: 56px 0 24px;
+  position: relative;
+}
+
+.masthead-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}
+.masthead-ornament::before,
+.masthead-ornament::after {
+  content: '';
+  flex: 1;
+  max-width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.masthead-ornament::after {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+h1 {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, #fff8dc 70%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 0 18px rgba(201,162,39,0.45));
+}
+
+.subtitle {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.35em;
+  color: var(--amethyst-light);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+.intro-text {
+  font-size: 1.1rem;
+  color: var(--cream-dim);
+  max-width: 560px;
+  margin: 0 auto 12px;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════
+   DIVIDER
+═══════════════════════════════════════════ */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 32px 0;
+  opacity: 0.5;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim));
+}
+.divider::after {
+  background: linear-gradient(90deg, var(--gold-dim), transparent);
+}
+.divider-symbol {
+  color: var(--gold-dim);
+  font-size: 1.2rem;
+}
+
+/* ═══════════════════════════════════════════
+   SPREAD SELECTOR
+═══════════════════════════════════════════ */
+#setup-panel {
+  text-align: center;
+  animation: fadeUp 0.8s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.section-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--amethyst-light);
+  margin-bottom: 16px;
+}
+
+.spread-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.spread-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--gold-dim);
+  color: var(--cream-dim);
+  font-family: 'Cinzel', serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.1em;
+  padding: 14px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  position: relative;
+  overflow: hidden;
+}
+.spread-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201,162,39,0.08), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.spread-btn:hover { border-color: var(--gold); color: var(--gold-light); }
+.spread-btn:hover::before { opacity: 1; }
+.spread-btn.active {
+  border-color: var(--gold);
+  color: var(--gold-light);
+  background: var(--bg-mid);
+  box-shadow: var(--shadow-gold), inset 0 0 20px rgba(201,162,39,0.05);
+}
+.spread-btn.active::before { opacity: 1; }
+.spread-btn .btn-count {
+  display: block;
+  font-size: 1.8rem;
+  font-family: 'Cinzel Decorative', serif;
+  color: var(--gold);
+  margin-bottom: 4px;
+  line-height: 1;
+}
+.spread-btn .btn-name {
+  display: block;
+  font-size: 0.8rem;
+}
+.spread-btn .btn-desc {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--cream-dim);
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════════
+   BEGIN BUTTON
+═══════════════════════════════════════════ */
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--bg-void);
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: none;
+  padding: 16px 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 24px rgba(201,162,39,0.3);
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -60%;
+  width: 50%; height: 200%;
+  background: rgba(255,255,255,0.2);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+.btn-primary:hover { box-shadow: 0 6px 32px rgba(201,162,39,0.55); transform: translateY(-1px); }
+.btn-primary:hover::after { left: 160%; }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--amethyst-light);
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--amethyst);
+  padding: 12px 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 16px;
+}
+.btn-secondary:hover { background: rgba(123,94,167,0.15); color: var(--amethyst-light); box-shadow: 0 0 20px rgba(123,94,167,0.3); }
+
+/* ═══════════════════════════════════════════
+   DECK AREA
+═══════════════════════════════════════════ */
+#deck-panel {
+  display: none;
+  animation: fadeUp 0.6s ease both;
+}
+
+.deck-instruction {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.deck-instruction h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  color: var(--gold);
+  margin-bottom: 8px;
+  letter-spacing: 0.1em;
+}
+.deck-instruction p { color: var(--cream-dim); font-style: italic; }
+
+.cards-needed-badge {
+  display: inline-block;
+  background: var(--bg-surface);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.15em;
+  padding: 6px 18px;
+  border-radius: 20px;
+  margin-top: 12px;
+}
+
+/* Deck grid */
+#deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 6px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding: 20px;
+  background: rgba(13,10,30,0.6);
+  border: 1px solid rgba(201,162,39,0.15);
+  border-radius: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+  margin-bottom: 24px;
+}
+#deck-grid::-webkit-scrollbar { width: 6px; }
+#deck-grid::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+/* Individual face-down card in deck */
+.deck-card {
+  aspect-ratio: 2/3.5;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(201,162,39,0.2);
+  overflow: hidden;
+  background: var(--card-back);
+}
+.deck-card::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(201,162,39,0.25);
+  border-radius: 4px;
+  background: 
+    repeating-linear-gradient(45deg, rgba(201,162,39,0.04) 0px, rgba(201,162,39,0.04) 1px, transparent 1px, transparent 8px),
+    repeating-linear-gradient(-45deg, rgba(123,94,167,0.04) 0px, rgba(123,94,167,0.04) 1px, transparent 1px, transparent 8px);
+}
+.deck-card::after {
+  content: '✦';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 1rem;
+  color: rgba(201,162,39,0.3);
+  pointer-events: none;
+}
+.deck-card:hover:not(.selected):not(.used) {
+  transform: translateY(-4px) scale(1.08);
+  box-shadow: 0 8px 20px rgba(201,162,39,0.35);
+  border-color: var(--gold);
+  z-index: 2;
+}
+.deck-card.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(201,162,39,0.6);
+  cursor: default;
+  transform: translateY(-4px);
+}
+.deck-card.selected::after { content: '✓'; color: var(--gold); font-size: 1.1rem; }
+.deck-card.used {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════
+   READING PANEL
+═══════════════════════════════════════════ */
+#reading-panel {
+  display: none;
+  animation: fadeUp 0.8s ease both;
+}
+
+.spread-label {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--amethyst-light);
+  margin-bottom: 32px;
+}
+
+/* The revealed cards row */
+#revealed-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 48px;
+}
+
+/* Single revealed card */
+.revealed-card {
+  flex: 0 0 auto;
+  width: 180px;
+  animation: cardReveal 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(30px) scale(0.85) rotateY(40deg); }
+  to   { opacity: 1; transform: translateY(0) scale(1) rotateY(0deg); }
+}
+
+.card-position-label {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--amethyst-light);
+  margin-bottom: 10px;
+}
+
+/* The card face */
+.card-face {
+  aspect-ratio: 2/3.5;
+  border-radius: 10px;
+  border: 2px solid var(--gold-dim);
+  background: linear-gradient(160deg, #1a1232, #0f0b22);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-deep), 0 0 30px rgba(201,162,39,0.15);
+  margin-bottom: 14px;
+  transition: box-shadow 0.3s;
+}
+.card-face:hover { box-shadow: var(--shadow-deep), 0 0 40px rgba(201,162,39,0.3); }
+
+.card-face.reversed { transform: rotate(180deg); }
+
+/* Decorative corners */
+.card-face::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(201,162,39,0.3);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Card art area */
+.card-art {
+  position: absolute;
+  inset: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.card-roman {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 2.2rem;
+  color: rgba(201,162,39,0.35);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.card-suit-symbol {
+  font-size: 3.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px currentColor);
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.card-top-number {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.55rem;
+  color: var(--gold-dim);
+  letter-spacing: 0.05em;
+  z-index: 3;
+}
+.card-top-number-r {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.55rem;
+  color: var(--gold-dim);
+  letter-spacing: 0.05em;
+  z-index: 3;
+  transform: rotate(180deg);
+}
+
+/* Starry card background */
+.card-bg-stars {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(123,94,167,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(201,162,39,0.08) 0%, transparent 50%);
+  z-index: 0;
+}
+
+/* Major arcana gradient overlays by card */
+.bg-major  { background: linear-gradient(160deg, #1a1232, #0f0b22); }
+.bg-wands  { background: linear-gradient(160deg, #1f1510, #12090a); }
+.bg-cups   { background: linear-gradient(160deg, #0e1722, #08111a); }
+.bg-swords { background: linear-gradient(160deg, #131620, #0a0c1a); }
+.bg-pentacles { background: linear-gradient(160deg, #101a10, #09120a); }
+
+.suit-color-wands     { color: #d4610a; }
+.suit-color-cups      { color: #1e90ff; }
+.suit-color-swords    { color: #c0c8e0; }
+.suit-color-pentacles { color: #3db843; }
+.suit-color-major     { color: var(--gold); }
+
+/* Card info below image */
+.card-info { text-align: center; }
+
+.card-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cream);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.card-orientation {
+  display: inline-block;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.card-orientation.upright {
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  background: rgba(201,162,39,0.08);
+}
+.card-orientation.reversed {
+  color: var(--amethyst-light);
+  border: 1px solid var(--amethyst);
+  background: rgba(123,94,167,0.1);
+}
+
+.card-keywords {
+  font-size: 0.75rem;
+  color: var(--cream-dim);
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.card-interpretation {
+  font-size: 0.88rem;
+  color: var(--cream-dim);
+  text-align: left;
+  padding: 12px;
+  background: rgba(13,10,30,0.5);
+  border-left: 2px solid var(--gold-dim);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.65;
+}
+
+/* ═══════════════════════════════════════════
+   COMBINED READING SECTION
+═══════════════════════════════════════════ */
+#combined-reading {
+  background: linear-gradient(135deg, rgba(19,15,42,0.9), rgba(28,22,56,0.8));
+  border: 1px solid rgba(201,162,39,0.25);
+  border-radius: 14px;
+  padding: 36px 40px;
+  margin-top: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 40px rgba(201,162,39,0.03);
+}
+#combined-reading::before {
+  content: '"';
+  position: absolute;
+  top: -10px; left: 20px;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 8rem;
+  color: rgba(201,162,39,0.06);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.reading-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.reading-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold-dim), transparent);
+}
+
+#combined-text {
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: var(--cream);
+}
+#combined-text p { margin-bottom: 16px; }
+#combined-text p:last-child { margin-bottom: 0; }
+
+.reading-loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--cream-dim);
+  font-style: italic;
+}
+.reading-loading-dots {
+  display: flex;
+  gap: 6px;
+}
+.reading-loading-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+.reading-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.reading-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ═══════════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════════ */
+.actions-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 40px;
+}
+
+/* ═══════════════════════════════════════════
+   TRANSITIONS
+═══════════════════════════════════════════ */
+.panel-enter {
+  animation: fadeUp 0.6s ease both;
+}
+.panel-exit {
+  animation: fadeDown 0.3s ease both;
+}
+@keyframes fadeDown {
+  to { opacity: 0; transform: translateY(-16px); }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  header { padding: 36px 0 16px; }
+  .revealed-card { width: 140px; }
+  .spread-btn { min-width: 130px; padding: 12px 16px; }
+  #combined-reading { padding: 24px 20px; }
+  #deck-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); max-height: 380px; }
+}
+@media (max-width: 380px) {
+  .revealed-card { width: 120px; }
+}
+
+/* ═══════════════════════════════════════════
+   GLOW PULSE (for selected state)
+═══════════════════════════════════════════ */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: var(--shadow-deep), 0 0 18px rgba(201,162,39,0.2); }
+  50%       { box-shadow: var(--shadow-deep), 0 0 40px rgba(201,162,39,0.4); }
+}
+.card-face { animation: glowPulse 4s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- Starfield -->
+<div id="starfield"></div>
+<svg id="constellations" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice"></svg>
+
+<div id="app">
+  <header>
+    <div class="masthead-ornament">✦ ✦ ✦</div>
+    <h1>The Arcana</h1>
+    <p class="subtitle">Tarot · Divination · Insight</p>
+    <p class="intro-text">Still your mind. Focus on your question. Let the cards reveal what the universe wishes to share.</p>
+  </header>
+
+  <!-- ── SETUP PANEL ── -->
+  <section id="setup-panel">
+    <div class="divider"><span class="divider-symbol">⬡</span></div>
+
+    <p class="section-label">Choose Your Spread</p>
+    <div class="spread-options">
+      <button class="spread-btn" data-count="1" data-type="Single Card">
+        <span class="btn-count">I</span>
+        <span class="btn-name">Single Card</span>
+        <span class="btn-desc">A focused moment of clarity</span>
+      </button>
+      <button class="spread-btn active" data-count="3" data-type="Past · Present · Future">
+        <span class="btn-count">III</span>
+        <span class="btn-name">Three Card</span>
+        <span class="btn-desc">Past · Present · Future</span>
+      </button>
+      <button class="spread-btn" data-count="5" data-type="Celtic Cross (5-Card)">
+        <span class="btn-count">V</span>
+        <span class="btn-name">Five Card</span>
+        <span class="btn-desc">Situation · Challenge · Advice · Influences · Outcome</span>
+      </button>
+    </div>
+
+    <div>
+      <button class="btn-primary" id="begin-btn">Begin the Reading</button>
+    </div>
+  </section>
+
+  <!-- ── DECK PANEL ── -->
+  <section id="deck-panel">
+    <div class="deck-instruction">
+      <h2>The Deck Awaits You</h2>
+      <p>Trust your intuition — touch the cards that call to you.</p>
+      <span class="cards-needed-badge" id="selection-counter">Select 3 cards</span>
+    </div>
+    <div id="deck-grid"></div>
+    <div style="text-align:center; margin-top:8px;">
+      <button class="btn-secondary" id="back-btn">← Change Spread</button>
+    </div>
+  </section>
+
+  <!-- ── READING PANEL ── -->
+  <section id="reading-panel">
+    <p class="spread-label" id="spread-type-label">Past · Present · Future</p>
+
+    <div id="revealed-cards"></div>
+
+    <div id="combined-reading">
+      <div class="reading-title">✦ &nbsp;Your Reading</div>
+      <div id="combined-text">
+        <div class="reading-loading">
+          <div class="reading-loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          Consulting the stars…
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn-primary" id="again-btn">Draw Again</button>
+      <button class="btn-secondary" id="change-spread-btn">Change Spread</button>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   TAROT DECK DATA — 78 cards
+   Each card: id, name, arcana, suit, roman, uprightMeaning,
+              reversedMeaning, keywords, symbol
+════════════════════════════════════════════════════════ */
+const TAROT_DECK = [
+  // ── MAJOR ARCANA ──
+  { id:0,  name:"The Fool",         arcana:"major", suit:null,       roman:"0",    symbol:"☽", uprightMeaning:"New beginnings, spontaneity, a leap of faith, and infinite potential. The universe invites you to embrace the unknown with open arms.", reversedMeaning:"Recklessness, poor judgment, or fear of taking the next step. You may be holding yourself back from necessary change.", keywords:"Beginnings · Innocence · Adventure" },
+  { id:1,  name:"The Magician",     arcana:"major", suit:null,       roman:"I",    symbol:"⊙", uprightMeaning:"You have all the tools you need to manifest your desires. Channel your willpower and skill — creation is within your grasp.", reversedMeaning:"Manipulation, untapped talents, or scattered energy. Refocus and trust in your own abilities before moving forward.", keywords:"Manifestation · Willpower · Skill" },
+  { id:2,  name:"The High Priestess",arcana:"major",suit:null,       roman:"II",   symbol:"☽", uprightMeaning:"Deep intuition, inner knowing, and hidden wisdom are guiding you. Trust the quiet voice within — it speaks truth.", reversedMeaning:"Secrets, blocked intuition, or ignoring your inner wisdom. Pause and listen more deeply to your subconscious signals.", keywords:"Intuition · Mystery · Inner Voice" },
+  { id:3,  name:"The Empress",      arcana:"major", suit:null,       roman:"III",  symbol:"♀", uprightMeaning:"Abundance, creativity, and nurturing energy surround you. This is a fertile time for growth in love, nature, and creative endeavors.", reversedMeaning:"Creative blocks, dependence, or neglecting your own needs. Restore balance by nurturing yourself as much as others.", keywords:"Abundance · Fertility · Nature" },
+  { id:4,  name:"The Emperor",      arcana:"major", suit:null,       roman:"IV",   symbol:"♂", uprightMeaning:"Structure, authority, and stability are your foundations. Strong leadership and clear boundaries will serve you well now.", reversedMeaning:"Rigidity, excessive control, or lack of discipline. Consider where flexibility might open new doors for you.", keywords:"Authority · Structure · Leadership" },
+  { id:5,  name:"The Hierophant",   arcana:"major", suit:null,       roman:"V",    symbol:"☩", uprightMeaning:"Traditional wisdom, spiritual guidance, and established systems offer you support. Seek a mentor or trusted tradition.", reversedMeaning:"Questioning convention, breaking free from dogma, or feeling restricted by institutions. Trust your own spiritual path.", keywords:"Tradition · Guidance · Belief" },
+  { id:6,  name:"The Lovers",       arcana:"major", suit:null,       roman:"VI",   symbol:"♡", uprightMeaning:"Harmony, alignment, and meaningful connections illuminate your path. A powerful choice involving values and relationships is at hand.", reversedMeaning:"Disharmony, misalignment, or poor choices in relationships. Reflect on what truly aligns with your deepest values.", keywords:"Love · Alignment · Choice" },
+  { id:7,  name:"The Chariot",      arcana:"major", suit:null,       roman:"VII",  symbol:"⚔", uprightMeaning:"Determination, focused will, and triumph over obstacles. You have the drive to overcome challenges and reach your goal.", reversedMeaning:"Lack of direction, aggression, or feeling out of control. Pause and reclaim your inner compass before charging ahead.", keywords:"Victory · Willpower · Control" },
+  { id:8,  name:"Strength",         arcana:"major", suit:null,       roman:"VIII", symbol:"∞", uprightMeaning:"Inner courage, patience, and compassionate power. True strength comes from gentleness and self-mastery, not force.", reversedMeaning:"Self-doubt, insecurity, or repressed feelings threatening to surface. Honor your emotions and meet them with kindness.", keywords:"Courage · Patience · Inner Power" },
+  { id:9,  name:"The Hermit",       arcana:"major", suit:null,       roman:"IX",   symbol:"🕯", uprightMeaning:"Solitude, soul-searching, and inner guidance illuminate your way. A period of reflection will reveal what you truly seek.", reversedMeaning:"Isolation, loneliness, or withdrawal from the world around you. Balance introspection with meaningful connection.", keywords:"Solitude · Reflection · Wisdom" },
+  { id:10, name:"Wheel of Fortune", arcana:"major", suit:null,       roman:"X",    symbol:"⊕", uprightMeaning:"A turning point, cycles of change, and the hand of fate creating new opportunities. The wheel is spinning in your favor.", reversedMeaning:"Resistance to change, bad luck, or feeling caught in an unwanted cycle. Accept that change is the only constant.", keywords:"Cycles · Fate · Turning Point" },
+  { id:11, name:"Justice",          arcana:"major", suit:null,       roman:"XI",   symbol:"⚖", uprightMeaning:"Fairness, truth, and balanced outcomes are coming to light. Honest decisions and ethical actions will guide you well.", reversedMeaning:"Unfairness, dishonesty, or avoiding accountability. Examine where you might need to make amends or seek balance.", keywords:"Truth · Fairness · Accountability" },
+  { id:12, name:"The Hanged Man",   arcana:"major", suit:null,       roman:"XII",  symbol:"🔱", uprightMeaning:"Surrender, new perspectives, and willing sacrifice bring illumination. Pause and see the world from a different angle.", reversedMeaning:"Stalling, indecision, or resisting necessary sacrifice. Release what no longer serves you to move forward freely.", keywords:"Pause · Perspective · Sacrifice" },
+  { id:13, name:"Death",            arcana:"major", suit:null,       roman:"XIII", symbol:"⊗", uprightMeaning:"Transformation, endings that make way for new beginnings. Something must close so that something better can emerge.", reversedMeaning:"Resistance to change or an inability to let go of the past. Embrace the flow of transformation — it leads to renewal.", keywords:"Transformation · Endings · Renewal" },
+  { id:14, name:"Temperance",       arcana:"major", suit:null,       roman:"XIV",  symbol:"△", uprightMeaning:"Balance, patience, and harmonious blending of opposing forces. Moderation and flow will bring what you seek.", reversedMeaning:"Imbalance, excess, or lack of patience. Slow down and restore harmony within before trying to harmonize without.", keywords:"Balance · Patience · Harmony" },
+  { id:15, name:"The Devil",        arcana:"major", suit:null,       roman:"XV",   symbol:"◈", uprightMeaning:"Awareness of shadow patterns, attachments, and limiting beliefs. Recognizing what binds you is the first step to freedom.", reversedMeaning:"Liberation from constraints or breaking unhealthy patterns. You are finding the courage to release what no longer serves you.", keywords:"Shadow · Attachment · Awareness" },
+  { id:16, name:"The Tower",        arcana:"major", suit:null,       roman:"XVI",  symbol:"⚡", uprightMeaning:"Sudden change, upheaval, and the crumbling of false structures. What falls was built on unstable ground — what remains is true.", reversedMeaning:"Avoiding inevitable change or a personal revelation being resisted. The shift is coming — surrender will ease the transition.", keywords:"Upheaval · Revelation · Change" },
+  { id:17, name:"The Star",         arcana:"major", suit:null,       roman:"XVII", symbol:"✦", uprightMeaning:"Hope, renewal, and divine guidance pour down upon you. This is a time of healing, inspiration, and trusting the universe.", reversedMeaning:"Lack of faith, despair, or disconnection from your purpose. Your light has not gone out — reconnect with what nourishes you.", keywords:"Hope · Healing · Inspiration" },
+  { id:18, name:"The Moon",         arcana:"major", suit:null,       roman:"XVIII",symbol:"☽", uprightMeaning:"Illusions, subconscious depths, and the mysterious unknown beckon. Pay attention to dreams and intuitive hunches now.", reversedMeaning:"Confusion lifting, hidden truths emerging, or overcoming fear. Trust your instincts as clarity slowly returns.", keywords:"Illusion · Intuition · The Unknown" },
+  { id:19, name:"The Sun",          arcana:"major", suit:null,       roman:"XIX",  symbol:"☀", uprightMeaning:"Joy, vitality, and radiant success illuminate your path. A time of warmth, confidence, and wonderful clarity is here.", reversedMeaning:"Temporary pessimism or dimmed enthusiasm. Your inner light is strong — allow yourself to let it shine again.", keywords:"Joy · Success · Clarity" },
+  { id:20, name:"Judgement",        arcana:"major", suit:null,       roman:"XX",   symbol:"⋈", uprightMeaning:"Awakening, reflection, and a powerful call to step into your true purpose. Listen to your higher calling with an open heart.", reversedMeaning:"Self-doubt, ignoring your calling, or harsh self-judgment. Be compassionate with yourself as you awaken to truth.", keywords:"Awakening · Calling · Renewal" },
+  { id:21, name:"The World",        arcana:"major", suit:null,       roman:"XXI",  symbol:"○", uprightMeaning:"Completion, integration, and wholeness. You are crossing a threshold into a new chapter having mastered an important lesson.", reversedMeaning:"Incompletion or loose ends holding you back from full celebration. Take the final steps to close this meaningful cycle.", keywords:"Completion · Wholeness · Integration" },
+
+  // ── WANDS ──
+  { id:22, name:"Ace of Wands",     arcana:"minor", suit:"wands",    roman:"A",    symbol:"🔥", uprightMeaning:"A spark of inspiration, creative energy, and bold new beginnings. Now is the time to take initiative and ignite your passion.", reversedMeaning:"Delays, lack of motivation, or creative blocks. Reconnect with what excites you and let that energy lead the way.", keywords:"Inspiration · Fire · New Energy" },
+  { id:23, name:"Two of Wands",     arcana:"minor", suit:"wands",    roman:"II",   symbol:"🔥", uprightMeaning:"Planning for the future, expansion, and standing at the edge of possibility. The world is open to you — dare to dream big.", reversedMeaning:"Fear of the unknown, poor planning, or playing it too safe. Step out of your comfort zone to embrace new horizons.", keywords:"Planning · Vision · Expansion" },
+  { id:24, name:"Three of Wands",   arcana:"minor", suit:"wands",    roman:"III",  symbol:"🔥", uprightMeaning:"Progress, foresight, and the fruits of your early efforts are beginning to show. Keep your eyes on the horizon — help is on the way.", reversedMeaning:"Delays in plans, lack of foresight, or obstacles to progress. Patience and flexibility will see you through.", keywords:"Progress · Foresight · Growth" },
+  { id:25, name:"Four of Wands",    arcana:"minor", suit:"wands",    roman:"IV",   symbol:"🔥", uprightMeaning:"Celebration, harmony, and a joyful milestone worth honoring. Your efforts have created a stable, happy foundation.", reversedMeaning:"Instability at home or delayed celebrations. Look for harmony within yourself even as external circumstances shift.", keywords:"Celebration · Harmony · Milestone" },
+  { id:26, name:"Five of Wands",    arcana:"minor", suit:"wands",    roman:"V",    symbol:"🔥", uprightMeaning:"Friendly competition, diverse viewpoints, and energetic conflict that sharpens your ideas. Engage with the challenge constructively.", reversedMeaning:"Avoiding conflict or a competitive situation becoming draining. Seek resolution and common ground with those around you.", keywords:"Conflict · Competition · Diversity" },
+  { id:27, name:"Six of Wands",     arcana:"minor", suit:"wands",    roman:"VI",   symbol:"🔥", uprightMeaning:"Victory, public recognition, and success well-deserved. Acknowledge your achievements and allow yourself to receive praise.", reversedMeaning:"Ego struggles, lack of recognition, or self-doubt after a setback. Remember that inner victory matters as much as outer success.", keywords:"Victory · Recognition · Success" },
+  { id:28, name:"Seven of Wands",   arcana:"minor", suit:"wands",    roman:"VII",  symbol:"🔥", uprightMeaning:"Courage, defense, and maintaining your position despite opposition. Stand your ground and protect what matters to you.", reversedMeaning:"Feeling overwhelmed, giving up, or backing down from important beliefs. Draw on your resilience — you are stronger than you think.", keywords:"Defense · Courage · Persistence" },
+  { id:29, name:"Eight of Wands",   arcana:"minor", suit:"wands",    roman:"VIII", symbol:"🔥", uprightMeaning:"Swift action, rapid progress, and exciting news arriving at last. Things are moving quickly — keep up with the momentum.", reversedMeaning:"Delays, miscommunication, or chaotic rushing. Slow down briefly to ensure your energy is going in the right direction.", keywords:"Speed · Action · News" },
+  { id:30, name:"Nine of Wands",    arcana:"minor", suit:"wands",    roman:"IX",   symbol:"🔥", uprightMeaning:"Resilience, perseverance, and almost-victory. You have come so far — hold on and don't give up when you're nearly there.", reversedMeaning:"Exhaustion, stubbornness, or paranoia. Ask for support if you need it — accepting help is a form of strength.", keywords:"Resilience · Perseverance · Endurance" },
+  { id:31, name:"Ten of Wands",     arcana:"minor", suit:"wands",    roman:"X",    symbol:"🔥", uprightMeaning:"Overextension, heavy burdens, and the need to delegate. Consider what you can release or share to lighten your load.", reversedMeaning:"Refusing to delegate, burning out, or finally releasing heavy responsibilities. Let yourself breathe.", keywords:"Burden · Overload · Responsibility" },
+  { id:32, name:"Page of Wands",    arcana:"minor", suit:"wands",    roman:"PAGE", symbol:"🔥", uprightMeaning:"Enthusiastic energy, exploration, and a youthful desire to learn and try new things. An exciting message or opportunity may arrive.", reversedMeaning:"Impatience, lack of follow-through, or hasty actions. Channel your enthusiasm into something focused and sustainable.", keywords:"Enthusiasm · Exploration · Discovery" },
+  { id:33, name:"Knight of Wands",  arcana:"minor", suit:"wands",    roman:"KN",   symbol:"🔥", uprightMeaning:"Bold action, passionate pursuit, and high energy. Move toward your goals with confidence and adventurous spirit.", reversedMeaning:"Impulsiveness, recklessness, or scattered energy. Pause briefly to ensure your actions align with your true direction.", keywords:"Action · Passion · Adventure" },
+  { id:34, name:"Queen of Wands",   arcana:"minor", suit:"wands",    roman:"QN",   symbol:"🔥", uprightMeaning:"Charisma, determination, and vibrant creative power. You have the inner fire to inspire others and achieve your vision.", reversedMeaning:"Self-doubt, jealousy, or feeling burned out. Reconnect with your authentic passion and let it guide you forward.", keywords:"Charisma · Confidence · Fire" },
+  { id:35, name:"King of Wands",    arcana:"minor", suit:"wands",    roman:"KG",   symbol:"🔥", uprightMeaning:"Visionary leadership, bold entrepreneurial spirit, and inspired action. Step fully into your power and lead with conviction.", reversedMeaning:"Impulsive leadership, arrogance, or being overly domineering. Lead with empathy as well as strength.", keywords:"Vision · Leadership · Mastery" },
+
+  // ── CUPS ──
+  { id:36, name:"Ace of Cups",      arcana:"minor", suit:"cups",     roman:"A",    symbol:"💧", uprightMeaning:"New emotional beginnings, deep love, and spiritual nourishment. Your heart is open and ready to receive what the universe offers.", reversedMeaning:"Emotional blocks, repressed feelings, or an inability to open up. Gently invite yourself to feel and express what is within.", keywords:"Love · Emotion · New Feelings" },
+  { id:37, name:"Two of Cups",      arcana:"minor", suit:"cups",     roman:"II",   symbol:"💧", uprightMeaning:"Partnership, mutual attraction, and deep emotional connection. A relationship built on mutual respect and genuine care is highlighted.", reversedMeaning:"Imbalance in a relationship, broken bonds, or poor communication. Open honest dialogue can restore harmony.", keywords:"Partnership · Connection · Harmony" },
+  { id:38, name:"Three of Cups",    arcana:"minor", suit:"cups",     roman:"III",  symbol:"💧", uprightMeaning:"Friendship, celebration, and joyful community. Cherish your connections and allow yourself to revel in shared happiness.", reversedMeaning:"Overindulgence, gossip, or isolation from your community. Seek genuine connections over superficial pleasures.", keywords:"Celebration · Friendship · Joy" },
+  { id:39, name:"Four of Cups",     arcana:"minor", suit:"cups",     roman:"IV",   symbol:"💧", uprightMeaning:"Contemplation, apathy, and re-evaluation. Look up from your meditation — an unexpected gift may be waiting for you.", reversedMeaning:"Emerging from withdrawal, renewed motivation, or noticing what was overlooked. Your perspective is shifting for the better.", keywords:"Contemplation · Apathy · Reflection" },
+  { id:40, name:"Five of Cups",     arcana:"minor", suit:"cups",     roman:"V",    symbol:"💧", uprightMeaning:"Grief, loss, and the lingering pain of disappointment. Allow yourself to mourn, but remember that two cups still stand behind you.", reversedMeaning:"Moving on from grief, acceptance, and finding peace after loss. Healing is progressing, even if slowly.", keywords:"Loss · Grief · Moving On" },
+  { id:41, name:"Six of Cups",      arcana:"minor", suit:"cups",     roman:"VI",   symbol:"💧", uprightMeaning:"Nostalgia, innocence, and happy memories. A cherished past connection or childhood joy may be revisiting your life.", reversedMeaning:"Living in the past or being unable to move forward. Honor your memories while keeping your eyes open to the present.", keywords:"Nostalgia · Innocence · Past" },
+  { id:42, name:"Seven of Cups",    arcana:"minor", suit:"cups",     roman:"VII",  symbol:"💧", uprightMeaning:"Fantasy, illusion, and many choices before you. Take time to discern what is real and what truly aligns with your values.", reversedMeaning:"Clarity emerging after confusion, making decisions, or overcoming illusions. Trust the choices that align with your heart.", keywords:"Fantasy · Choices · Illusion" },
+  { id:43, name:"Eight of Cups",    arcana:"minor", suit:"cups",     roman:"VIII", symbol:"💧", uprightMeaning:"Walking away from what no longer fulfills you in search of deeper meaning. This courageous step leads to something more aligned.", reversedMeaning:"Fear of change or returning to the familiar despite knowing it doesn't serve you. Trust the call toward something deeper.", keywords:"Walking Away · Seeking · Transition" },
+  { id:44, name:"Nine of Cups",     arcana:"minor", suit:"cups",     roman:"IX",   symbol:"💧", uprightMeaning:"Wishes fulfilled, contentment, and emotional satisfaction. Your heart's desire is within reach — allow yourself to receive it.", reversedMeaning:"Overindulgence, inner emptiness behind outward contentment, or temporary dissatisfaction. Look inward for lasting fulfillment.", keywords:"Wishes · Contentment · Fulfillment" },
+  { id:45, name:"Ten of Cups",      arcana:"minor", suit:"cups",     roman:"X",    symbol:"💧", uprightMeaning:"Lasting happiness, loving family bonds, and deep emotional fulfillment. A beautiful chapter of harmony and belonging is unfolding.", reversedMeaning:"Family discord, broken ideals, or misaligned values in relationships. Nurture understanding and compassion to restore the peace.", keywords:"Happiness · Family · Fulfillment" },
+  { id:46, name:"Page of Cups",     arcana:"minor", suit:"cups",     roman:"PAGE", symbol:"💧", uprightMeaning:"Creative sensitivity, intuitive messages, and an open emotional heart. A meaningful, unexpected message or artistic inspiration may come.", reversedMeaning:"Emotional immaturity, daydreaming without action, or creative blocks. Ground your imagination to bring your visions to life.", keywords:"Sensitivity · Messages · Creativity" },
+  { id:47, name:"Knight of Cups",   arcana:"minor", suit:"cups",     roman:"KN",   symbol:"💧", uprightMeaning:"Romantic idealism, following the heart, and being led by deep feeling. Pursue what stirs your emotions with grace and intentionality.", reversedMeaning:"Moodiness, unrealistic expectations, or being swept away by emotion. Find a balance between heart and head.", keywords:"Romance · Idealism · Feeling" },
+  { id:48, name:"Queen of Cups",    arcana:"minor", suit:"cups",     roman:"QN",   symbol:"💧", uprightMeaning:"Deep empathy, emotional intelligence, and intuitive wisdom. Your compassionate heart is a source of healing for yourself and others.", reversedMeaning:"Emotional overwhelm, co-dependence, or losing yourself in others' feelings. Nurture your own emotional wellbeing first.", keywords:"Empathy · Compassion · Intuition" },
+  { id:49, name:"King of Cups",     arcana:"minor", suit:"cups",     roman:"KG",   symbol:"💧", uprightMeaning:"Emotional mastery, wise compassion, and balanced feeling. Lead with both your heart and your wisdom to guide those around you.", reversedMeaning:"Emotional manipulation, moodiness, or suppressing your feelings. Reconnect honestly with your emotional landscape.", keywords:"Emotional Mastery · Wisdom · Balance" },
+
+  // ── SWORDS ──
+  { id:50, name:"Ace of Swords",    arcana:"minor", suit:"swords",   roman:"A",    symbol:"⚔", uprightMeaning:"Mental clarity, breakthrough thinking, and the power of truth. A new perspective or decisive action cuts through confusion.", reversedMeaning:"Clouded thinking, miscommunication, or a painful truth being avoided. Seek clarity before acting.", keywords:"Clarity · Truth · Breakthrough" },
+  { id:51, name:"Two of Swords",    arcana:"minor", suit:"swords",   roman:"II",   symbol:"⚔", uprightMeaning:"A difficult decision requiring balance and reflection. You may be avoiding a choice — allow yourself to sit with the options before moving forward.", reversedMeaning:"Indecision lifted, or facing a difficult truth you have been avoiding. Now is the time to choose with clarity and courage.", keywords:"Decision · Balance · Stalemate" },
+  { id:52, name:"Three of Swords",  arcana:"minor", suit:"swords",   roman:"III",  symbol:"⚔", uprightMeaning:"Heartache, grief, and the pain of loss or betrayal. Acknowledge the wound — healing begins when you fully allow yourself to feel.", reversedMeaning:"Healing after heartbreak, releasing pain, or moving forward after a difficult period. The storm is beginning to pass.", keywords:"Heartbreak · Grief · Pain" },
+  { id:53, name:"Four of Swords",   arcana:"minor", suit:"swords",   roman:"IV",   symbol:"⚔", uprightMeaning:"Rest, recuperation, and the need to step back for a moment. Your mind and body are asking for peace — honor that request.", reversedMeaning:"Restlessness, burnout, or recovering from a difficult period. Gradual re-engagement will serve you better than rushing back.", keywords:"Rest · Recovery · Solitude" },
+  { id:54, name:"Five of Swords",   arcana:"minor", suit:"swords",   roman:"V",    symbol:"⚔", uprightMeaning:"Conflict, defeat, and the cost of winning at all costs. Consider whether the battle is worth the damage it leaves behind.", reversedMeaning:"Letting go of conflict or choosing peace over victory. The desire to move past tension signals wisdom and maturity.", keywords:"Conflict · Defeat · Cost of Victory" },
+  { id:55, name:"Six of Swords",    arcana:"minor", suit:"swords",   roman:"VI",   symbol:"⚔", uprightMeaning:"Transition, moving away from turbulence, and finding calmer waters ahead. A gradual journey toward peace and healing is underway.", reversedMeaning:"Resistance to change or unfinished emotional business delaying your forward movement. Trust the transition.", keywords:"Transition · Moving On · Healing" },
+  { id:56, name:"Seven of Swords",  arcana:"minor", suit:"swords",   roman:"VII",  symbol:"⚔", uprightMeaning:"Strategy, stealth, and the need for clever thinking. Be mindful of where honesty is needed versus where discretion is wise.", reversedMeaning:"Deception uncovered, coming clean, or reconsidering a strategy that isn't fully honest. Integrity will serve you better.", keywords:"Strategy · Stealth · Caution" },
+  { id:57, name:"Eight of Swords",  arcana:"minor", suit:"swords",   roman:"VIII", symbol:"⚔", uprightMeaning:"Self-imposed restrictions, mental imprisonment, and limiting beliefs that bind you. The blindfold can be removed — you are freer than you think.", reversedMeaning:"Breaking free from limitations, regaining clarity, or overcoming mental barriers. Your path forward is opening up.", keywords:"Restriction · Limitation · Blindness" },
+  { id:58, name:"Nine of Swords",   arcana:"minor", suit:"swords",   roman:"IX",   symbol:"⚔", uprightMeaning:"Anxiety, nightmares, and the weight of worry at its peak. Remember that the darkest thoughts are not always reflections of reality.", reversedMeaning:"Releasing anxiety, confronting fears, or beginning to recover from a period of intense mental stress. You are not alone.", keywords:"Anxiety · Worry · Fear" },
+  { id:59, name:"Ten of Swords",    arcana:"minor", suit:"swords",   roman:"X",    symbol:"⚔", uprightMeaning:"A painful ending, rock bottom, and the realization that something must finally be released. Dawn follows even the darkest night.", reversedMeaning:"Recovery, rising after defeat, or resisting an inevitable ending. Allow the old to fall away so that new life can emerge.", keywords:"Ending · Rock Bottom · Release" },
+  { id:60, name:"Page of Swords",   arcana:"minor", suit:"swords",   roman:"PAGE", symbol:"⚔", uprightMeaning:"Curious, alert, and quick-minded energy. A desire for the truth and a willingness to ask the sharp questions that need asking.", reversedMeaning:"Gossip, hasty words, or acting without full information. Think before speaking and verify before concluding.", keywords:"Curiosity · Alertness · Communication" },
+  { id:61, name:"Knight of Swords", arcana:"minor", suit:"swords",   roman:"KN",   symbol:"⚔", uprightMeaning:"Swift action, direct communication, and fierce pursuit of a goal. Move forward with clarity — just ensure your path considers others too.", reversedMeaning:"Recklessness, scattered thinking, or acting too impulsively. Pause and gather your thoughts before charging forward.", keywords:"Swift Action · Directness · Drive" },
+  { id:62, name:"Queen of Swords",  arcana:"minor", suit:"swords",   roman:"QN",   symbol:"⚔", uprightMeaning:"Clear thinking, honest communication, and incisive perception. You see through illusion and speak truth with grace and intelligence.", reversedMeaning:"Cold detachment, harsh criticism, or allowing past pain to cloud your judgments. Temper your sharp mind with compassion.", keywords:"Clarity · Independence · Perception" },
+  { id:63, name:"King of Swords",   arcana:"minor", suit:"swords",   roman:"KG",   symbol:"⚔", uprightMeaning:"Mental authority, analytical power, and clear ethical principles. Lead with both intellectual rigor and fair-minded honesty.", reversedMeaning:"Abuse of authority, manipulative communication, or cold detachment from others' feelings. Use your power with integrity.", keywords:"Authority · Analysis · Ethics" },
+
+  // ── PENTACLES ──
+  { id:64, name:"Ace of Pentacles", arcana:"minor", suit:"pentacles",roman:"A",    symbol:"✦", uprightMeaning:"A new material opportunity, financial gift, or grounded beginning. The seeds of prosperity and security are being planted right now.", reversedMeaning:"Missed opportunity, poor financial planning, or instability in material affairs. Reassess your resources and priorities.", keywords:"Opportunity · Prosperity · Grounding" },
+  { id:65, name:"Two of Pentacles", arcana:"minor", suit:"pentacles",roman:"II",   symbol:"✦", uprightMeaning:"Balance, adaptability, and managing multiple priorities with grace. You are capable of juggling more than you think — stay fluid.", reversedMeaning:"Overwhelm, poor time management, or losing balance between responsibilities. Simplify where possible to regain your footing.", keywords:"Balance · Adaptability · Juggling" },
+  { id:66, name:"Three of Pentacles",arcana:"minor",suit:"pentacles",roman:"III",  symbol:"✦", uprightMeaning:"Teamwork, skill, and collaborative success. Working with others who complement your abilities creates something greater than any one person.", reversedMeaning:"Lack of teamwork, poor planning, or feeling unrecognized for your contributions. Speak up and ensure your value is known.", keywords:"Teamwork · Skill · Collaboration" },
+  { id:67, name:"Four of Pentacles",arcana:"minor", suit:"pentacles",roman:"IV",   symbol:"✦", uprightMeaning:"Financial security, saving, and careful stewardship of resources. Building a stable foundation is wise — just ensure it doesn't become hoarding.", reversedMeaning:"Excessive control over resources, financial insecurity, or fear of loss. Find security within yourself as well as your material world.", keywords:"Security · Saving · Control" },
+  { id:68, name:"Five of Pentacles",arcana:"minor", suit:"pentacles",roman:"V",    symbol:"✦", uprightMeaning:"Financial hardship, isolation, and feeling left out in the cold. Look for the light in the window — help and support are closer than they appear.", reversedMeaning:"Recovery from hardship, finding support, or an improving financial situation. Relief and renewed stability are on their way.", keywords:"Hardship · Struggle · Seeking Help" },
+  { id:69, name:"Six of Pentacles", arcana:"minor", suit:"pentacles",roman:"VI",   symbol:"✦", uprightMeaning:"Generosity, charity, and the flow of abundance. Whether giving or receiving, allow resources and kindness to flow freely.", reversedMeaning:"Strings attached to generosity, power imbalances in giving, or receiving without reciprocity. Examine the true nature of exchanges.", keywords:"Generosity · Charity · Sharing" },
+  { id:70, name:"Seven of Pentacles",arcana:"minor",suit:"pentacles",roman:"VII",  symbol:"✦", uprightMeaning:"Long-term investment, patience, and a pause to assess your progress. Your efforts are growing — trust the process and allow time to work.", reversedMeaning:"Impatience with slow results, poor investment of time or energy. Reassess your strategy and ensure your efforts match your goals.", keywords:"Investment · Patience · Assessment" },
+  { id:71, name:"Eight of Pentacles",arcana:"minor",suit:"pentacles",roman:"VIII", symbol:"✦", uprightMeaning:"Diligence, skill development, and mastery through dedicated practice. Consistent effort now will build lasting expertise and success.", reversedMeaning:"Lacking focus, perfectionism, or going through the motions without heart. Reconnect to why your craft matters to you.", keywords:"Diligence · Skill · Mastery" },
+  { id:72, name:"Nine of Pentacles",arcana:"minor", suit:"pentacles",roman:"IX",   symbol:"✦", uprightMeaning:"Abundance, self-sufficiency, and the fruits of your own labor. Enjoy the rewards you've earned — you built this through your own strength.", reversedMeaning:"Overworking, lack of self-worth, or financial dependence. Recognize how much you have achieved and allow yourself to receive.", keywords:"Abundance · Independence · Success" },
+  { id:73, name:"Ten of Pentacles", arcana:"minor", suit:"pentacles",roman:"X",    symbol:"✦", uprightMeaning:"Lasting wealth, family legacy, and generational security. The life you have built offers deep stability and long-term fulfillment.", reversedMeaning:"Family conflict over resources, unstable foundations, or fleeting wealth. Invest in what truly endures — relationships and values.", keywords:"Legacy · Wealth · Family" },
+  { id:74, name:"Page of Pentacles",arcana:"minor", suit:"pentacles",roman:"PAGE", symbol:"✦", uprightMeaning:"Studious, grounded, and eager to learn practical skills. A new opportunity for growth in work, study, or financial matters is presenting itself.", reversedMeaning:"Procrastination, lack of focus, or failing to see a practical opportunity. Take a small, grounded step forward today.", keywords:"Opportunity · Study · Practicality" },
+  { id:75, name:"Knight of Pentacles",arcana:"minor",suit:"pentacles",roman:"KN",  symbol:"✦", uprightMeaning:"Methodical, reliable, and hardworking energy. Slow and steady progress will lead to lasting success — commitment is your greatest asset.", reversedMeaning:"Stubbornness, stagnation, or being too rigid in your approach. Allow for flexibility alongside your diligence.", keywords:"Diligence · Reliability · Method" },
+  { id:76, name:"Queen of Pentacles",arcana:"minor",suit:"pentacles",roman:"QN",   symbol:"✦", uprightMeaning:"Nurturing, practical, and abundantly generous. You create warmth, security, and beauty in the material world for those around you.", reversedMeaning:"Work-life imbalance, financial worry, or neglecting self-care. Tend to your own garden as lovingly as you tend to others.", keywords:"Nurturing · Practicality · Abundance" },
+  { id:77, name:"King of Pentacles",arcana:"minor", suit:"pentacles",roman:"KG",   symbol:"✦", uprightMeaning:"Financial mastery, stable success, and generous leadership. You have the wisdom and resources to build lasting security for yourself and others.", reversedMeaning:"Stubbornness around money, materialism, or poor financial decisions. Reconnect with the values that underlie true wealth.", keywords:"Wealth · Mastery · Stability" }
+];
+
+/* ════════════════════════════════════════════════════════
+   SPREAD POSITION LABELS
+════════════════════════════════════════════════════════ */
+const SPREAD_LABELS = {
+  1: ["Your Message"],
+  3: ["Past", "Present", "Future"],
+  5: ["Situation", "Challenge", "Advice", "Influences", "Outcome"]
+};
+
+/* ════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
+let state = {
+  spreadCount: 3,
+  spreadType: "Past · Present · Future",
+  shuffledDeck: [],
+  selectedCards: [],   // indices into shuffledDeck
+  revealed: []         // { card, isReversed }
+};
+
+/* ════════════════════════════════════════════════════════
+   STARFIELD GENERATION
+════════════════════════════════════════════════════════ */
+function generateStarfield() {
+  const sf = document.getElementById('starfield');
+  for (let i = 0; i < 180; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 2.2 + 0.5;
+    star.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%; top:${Math.random()*100}%;
+      --d:${(Math.random()*4+2).toFixed(1)}s;
+      --a0:${(Math.random()*0.15+0.05).toFixed(2)};
+      --a1:${(Math.random()*0.6+0.2).toFixed(2)};
+      animation-delay:${(Math.random()*5).toFixed(1)}s;
+    `;
+    sf.appendChild(star);
+  }
+
+  // Constellation SVG lines
+  const svg = document.getElementById('constellations');
+  const pts = Array.from({length:12}, () => ({x: Math.random()*1200, y: Math.random()*900}));
+  let d = '';
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (Math.random() > 0.4) {
+      d += `M${pts[i].x},${pts[i].y} L${pts[i+1].x},${pts[i+1].y} `;
+    }
+  }
+  svg.innerHTML = `<path d="${d}" stroke="#c9a227" stroke-width="0.5" fill="none"/>`;
+}
+
+/* ════════════════════════════════════════════════════════
+   SHUFFLE
+════════════════════════════════════════════════════════ */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ════════════════════════════════════════════════════════
+   UI HELPERS
+════════════════════════════════════════════════════════ */
+function show(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.classList.add('panel-enter');
+}
+function hide(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+/* ════════════════════════════════════════════════════════
+   SPREAD SELECTOR
+════════════════════════════════════════════════════════ */
+document.querySelectorAll('.spread-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.spread-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.spreadCount = parseInt(btn.dataset.count);
+    state.spreadType = btn.dataset.type;
+  });
+});
+
+/* ════════════════════════════════════════════════════════
+   BEGIN READING
+════════════════════════════════════════════════════════ */
+document.getElementById('begin-btn').addEventListener('click', () => {
+  state.shuffledDeck = shuffle(TAROT_DECK);
+  state.selectedCards = [];
+  hide('setup-panel');
+  buildDeckGrid();
+  show('deck-panel');
+});
+
+/* ════════════════════════════════════════════════════════
+   BACK BUTTON
+════════════════════════════════════════════════════════ */
+document.getElementById('back-btn').addEventListener('click', () => {
+  hide('deck-panel');
+  show('setup-panel');
+});
+
+/* ════════════════════════════════════════════════════════
+   BUILD THE FACE-DOWN DECK GRID
+════════════════════════════════════════════════════════ */
+function buildDeckGrid() {
+  const grid = document.getElementById('deck-grid');
+  grid.innerHTML = '';
+  updateSelectionCounter();
+
+  state.shuffledDeck.forEach((_, idx) => {
+    const card = document.createElement('div');
+    card.className = 'deck-card';
+    card.dataset.idx = idx;
+    card.setAttribute('aria-label', 'Tarot card — click to select');
+    card.addEventListener('click', () => selectDeckCard(idx, card));
+    grid.appendChild(card);
+  });
+}
+
+function updateSelectionCounter() {
+  const remaining = state.spreadCount - state.selectedCards.length;
+  const badge = document.getElementById('selection-counter');
+  if (remaining <= 0) {
+    badge.textContent = 'All cards selected ✦';
+    badge.style.borderColor = 'var(--gold)';
+    badge.style.color = 'var(--gold)';
+  } else {
+    badge.textContent = `Select ${remaining} more card${remaining !== 1 ? 's' : ''}`;
+    badge.style.borderColor = '';
+    badge.style.color = '';
+  }
+}
+
+function selectDeckCard(idx, el) {
+  if (state.selectedCards.includes(idx)) return;
+  if (state.selectedCards.length >= state.spreadCount) return;
+
+  state.selectedCards.push(idx);
+  el.classList.add('selected');
+  updateSelectionCounter();
+
+  // Auto-reveal when all selected
+  if (state.selectedCards.length === state.spreadCount) {
+    setTimeout(revealReading, 600);
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   SUIT DISPLAY
+════════════════════════════════════════════════════════ */
+const SUIT_SYMBOLS = { wands:'🔥', cups:'💧', swords:'⚔', pentacles:'✦', null:'✦' };
+const SUIT_COLORS  = { wands:'suit-color-wands', cups:'suit-color-cups', swords:'suit-color-swords', pentacles:'suit-color-pentacles', null:'suit-color-major' };
+const SUIT_BG      = { wands:'bg-wands', cups:'bg-cups', swords:'bg-swords', pentacles:'bg-pentacles', null:'bg-major' };
+
+/* ════════════════════════════════════════════════════════
+   REVEAL THE READING
+════════════════════════════════════════════════════════ */
+function revealReading() {
+  hide('deck-panel');
+
+  state.revealed = state.selectedCards.map(idx => ({
+    card: state.shuffledDeck[idx],
+    isReversed: Math.random() > 0.65  // ~35% reversed
+  }));
+
+  document.getElementById('spread-type-label').textContent = state.spreadType;
+
+  const container = document.getElementById('revealed-cards');
+  container.innerHTML = '';
+
+  const labels = SPREAD_LABELS[state.spreadCount] || state.revealed.map((_,i)=>`Card ${i+1}`);
+
+  state.revealed.forEach(({ card, isReversed }, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'revealed-card';
+    wrap.style.setProperty('--delay', `${i * 0.18}s`);
+
+    const posLabel = document.createElement('div');
+    posLabel.className = 'card-position-label';
+    posLabel.textContent = labels[i] || `Card ${i+1}`;
+
+    const face = document.createElement('div');
+    const bgClass = SUIT_BG[card.suit];
+    face.className = `card-face ${bgClass}${isReversed ? ' reversed' : ''}`;
+
+    const bgStars = document.createElement('div');
+    bgStars.className = 'card-bg-stars';
+
+    const topNum = document.createElement('div');
+    topNum.className = 'card-top-number';
+    topNum.textContent = card.roman;
+
+    const topNumR = document.createElement('div');
+    topNumR.className = 'card-top-number-r';
+    topNumR.textContent = card.roman;
+
+    const art = document.createElement('div');
+    art.className = 'card-art';
+
+    const romanEl = document.createElement('div');
+    romanEl.className = 'card-roman';
+    romanEl.textContent = card.roman;
+
+    const suitSymbol = document.createElement('div');
+    const colorClass = SUIT_COLORS[card.suit];
+    suitSymbol.className = `card-suit-symbol ${colorClass}`;
+    suitSymbol.textContent = SUIT_SYMBOLS[card.suit] || SUIT_SYMBOLS[null];
+
+    art.appendChild(romanEl);
+    face.appendChild(bgStars);
+    face.appendChild(topNum);
+    face.appendChild(topNumR);
+    face.appendChild(art);
+    face.appendChild(suitSymbol);
+
+    const info = document.createElement('div');
+    info.className = 'card-info';
+
+    const name = document.createElement('div');
+    name.className = 'card-name';
+    name.textContent = card.name;
+
+    const orientation = document.createElement('div');
+    orientation.className = `card-orientation ${isReversed ? 'reversed' : 'upright'}`;
+    orientation.textContent = isReversed ? 'Reversed' : 'Upright';
+
+    const kw = document.createElement('div');
+    kw.className = 'card-keywords';
+    kw.textContent = card.keywords;
+
+    const interp = document.createElement('div');
+    interp.className = 'card-interpretation';
+    interp.textContent = isReversed ? card.reversedMeaning : card.uprightMeaning;
+
+    info.appendChild(name);
+    info.appendChild(orientation);
+    info.appendChild(kw);
+    info.appendChild(interp);
+
+    wrap.appendChild(posLabel);
+    wrap.appendChild(face);
+    wrap.appendChild(info);
+    container.appendChild(wrap);
+  });
+
+  document.getElementById('combined-text').innerHTML = `
+    <div class="reading-loading">
+      <div class="reading-loading-dots"><span></span><span></span><span></span></div>
+      Consulting the stars…
+    </div>`;
+
+  show('reading-panel');
+
+  // Generate combined reading via Anthropic API
+  generateCombinedReading();
+}
+
+/* ════════════════════════════════════════════════════════
+   ANTHROPIC API — COMBINED READING
+════════════════════════════════════════════════════════ */
+async function generateCombinedReading() {
+  const labels = SPREAD_LABELS[state.spreadCount] || state.revealed.map((_,i) => `Card ${i+1}`);
+
+  const cardDescriptions = state.revealed.map(({ card, isReversed }, i) =>
+    `Position: ${labels[i]}\nCard: ${card.name} (${isReversed ? 'Reversed' : 'Upright'})\nMeaning: ${isReversed ? card.reversedMeaning : card.uprightMeaning}\nKeywords: ${card.keywords}`
+  ).join('\n\n');
+
+  const prompt = `You are a wise, warm, and insightful tarot reader. A seeker has drawn the following cards in a ${state.spreadType} spread:\n\n${cardDescriptions}\n\nWrite a combined reading of 1–2 paragraphs that:\n- Weaves together the meaning of all the cards as a unified narrative\n- Gives warm, supportive, practical guidance and gentle predictions\n- Uses encouraging, human-friendly language (no fear-based or fatalistic statements)\n- Acknowledges the seeker's journey with compassion\n- Ends on a hopeful, empowering note\n\nRespond with only the reading text, no headers, no bullet points — flowing prose only.`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    if (!response.ok) throw new Error('API error');
+
+    const data = await response.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+
+    // Split into paragraphs and render
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+    document.getElementById('combined-text').innerHTML =
+      paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+
+  } catch (err) {
+    // Fallback reading
+    document.getElementById('combined-text').innerHTML = buildFallbackReading();
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   FALLBACK READING (if API unavailable)
+════════════════════════════════════════════════════════ */
+function buildFallbackReading() {
+  const cards = state.revealed;
+  const labels = SPREAD_LABELS[state.spreadCount] || cards.map((_,i) => `Card ${i+1}`);
+
+  if (cards.length === 1) {
+    const { card, isReversed } = cards[0];
+    return `<p>The ${card.name} speaks clearly to you today. ${isReversed ? card.reversedMeaning : card.uprightMeaning} Take this message into your heart and allow it to guide your next steps with confidence and clarity.</p>`;
+  }
+
+  const first = cards[0];
+  const last = cards[cards.length - 1];
+
+  return `<p>Your cards tell a story of movement and meaning. ${first.card.name} ${first.isReversed ? '(Reversed)' : ''} sets the scene — ${(first.isReversed ? first.card.reversedMeaning : first.card.uprightMeaning).split('.')[0]}. This energy forms the foundation from which everything else grows.</p><p>As you move through the present into what lies ahead, ${last.card.name} ${last.isReversed ? '(Reversed)' : ''} beckons as your horizon. ${(last.isReversed ? last.card.reversedMeaning : last.card.uprightMeaning).split('.')[0]}. Trust in the journey, for the cards remind you: your path is unfolding exactly as it needs to.</p>`;
+}
+
+/* ════════════════════════════════════════════════════════
+   DRAW AGAIN & CHANGE SPREAD
+════════════════════════════════════════════════════════ */
+document.getElementById('again-btn').addEventListener('click', () => {
+  hide('reading-panel');
+  state.shuffledDeck = shuffle(TAROT_DECK);
+  state.selectedCards = [];
+  buildDeckGrid();
+  show('deck-panel');
+});
+
+document.getElementById('change-spread-btn').addEventListener('click', () => {
+  hide('reading-panel');
+  show('setup-panel');
+});
+
+/* ════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════ */
+generateStarfield();
+</script>
+</body>
+</html>
